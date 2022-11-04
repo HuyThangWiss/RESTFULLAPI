@@ -1,0 +1,64 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"io/ioutil"
+	"log"
+	"net/http"
+)
+
+type Employee struct {
+	EmployeeId string `json:"employeeid"`
+	EmployeeName string `json:"employeename"`
+	Company string `json:"company"`
+	Salary int `json:"salary"`
+}
+
+var collection *mongo.Collection
+
+func main() {
+	resp, err := http.Get("http://localhost:8080/Select")
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	//sb := string(body)
+	//log.Printf(sb)
+
+	clientOption := options.Client().ApplyURI("mongodb://admin:f6XPinsVTx@localhost:27017")
+	client, err := mongo.Connect(context.TODO(), clientOption)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("MongoDB connection success")
+	collection = client.Database("Tests").Collection("Tests")
+
+	var docs []Employee
+	err = json.Unmarshal(body, &docs)
+	if err != nil{
+		log.Fatal(err)
+		return
+	}
+
+	for i := range docs {
+		doc := docs[i]
+		fmt.Println("ndoc _id:", doc.EmployeeId)
+		fmt.Println("doc Field Str:", doc.EmployeeName)
+		result, insertErr := collection.InsertOne(context.TODO(), doc)
+		if insertErr != nil {
+			fmt.Println("InsertOne ERROR:", insertErr)
+		} else {
+			fmt.Println("InsertOne() API result:", result)
+		}
+	}
+
+}
