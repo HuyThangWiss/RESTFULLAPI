@@ -1,0 +1,61 @@
+package main
+
+import (
+	"ProJectTest/CallServer/Information"
+	"context"
+	"github.com/goccy/go-json"
+
+	"fmt"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"time"
+)
+
+var collection *mongo.Collection
+
+func main() {
+	c := http.Client{Timeout: time.Duration(2) * time.Second}
+	req, err := http.NewRequest("GET", "https://open.dev.cma.citigo.net/v1/merchants/byRetailerId/1022643", nil)
+	if err != nil {
+		fmt.Printf("error %s", err)
+		return
+	}
+	req.Header.Add("X-API-Key", `AyLaPUyoB79NcAPfKxn5YXV2LoN2l59Mt3PlNIrxXT4ueidj.WPoU8viriHSp6DE9yFTxZQ`)
+	resp, err := c.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	//efer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	clientOption := options.Client().ApplyURI("mongodb://admin:f6XPinsVTx@localhost:27017")
+	client, err := mongo.Connect(context.TODO(), clientOption)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("MongoDB connection success")
+	collection = client.Database("Students").Collection("Students")
+
+	var doc Information.Users
+	err = json.Unmarshal(body, &doc)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	result, err := collection.InsertOne(context.TODO(), doc)
+
+	if err != nil {
+		fmt.Println("Err ", err)
+		return
+	}
+	fmt.Println("Count ", result.InsertedID)
+
+}
